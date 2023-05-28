@@ -1,10 +1,11 @@
+import subprocess
 import scrapy
 from interface import interface
-import subprocess
+from time import sleep
 
 
 class TjspspiderSpider(scrapy.Spider):
-    name = "tjspfinal"
+    name = "tjspfinalversion"
     allowed_domains = ["esaj.tjsp.jus.br"]
 
     def start_requests(self):
@@ -17,12 +18,10 @@ class TjspspiderSpider(scrapy.Spider):
 
         for processo in processos:
             parte_processo = processo.xpath(".//label[@class='unj-label tipoDeParticipacao']/text()").get()
-            if parte_processo is None:
-                parte_processo = processo.xpath(".//label[@class='unj-label tipoDeParticipacao']/text()")
             link_processo = processo.xpath(".//a[@class='linkProcesso']//@href").get()
             link_processo_url = 'https://esaj.tjsp.jus.br' + link_processo
-            yield response.follow(link_processo_url, callback=self.parse_processo_page,
-                                  meta={'parte_processo': parte_processo})
+            yield scrapy.Request(link_processo_url, callback=self.parse_processo_page,
+                                 meta={'parte_processo': parte_processo})
 
         next_page = response.xpath("//a[@title='Próxima página']//@href").get()
 
@@ -32,12 +31,14 @@ class TjspspiderSpider(scrapy.Spider):
 
     def parse_processo_page(self, response, **kwargs):
         parte_processo = response.meta.get('parte_processo', None)
-
         yield {
             'numero_do_processo': response.xpath(".//span[@id='numeroProcesso']/text()").get(),
             'valor_do_processo': response.xpath(".//div[@id='valorAcaoProcesso']/text()").get(),
-            'parte_no_processo': parte_processo
+            'parte_no_processo': parte_processo,
         }
 
 
-subprocess.run(['scrapy', 'crawl', 'tjspfinal', '-o', 'dados.csv'])
+try:
+    subprocess.run(['scrapy', 'crawl', 'tjspfinalversion', '-O', 'dados.csv'])
+except Exception as e:
+    print(e)
